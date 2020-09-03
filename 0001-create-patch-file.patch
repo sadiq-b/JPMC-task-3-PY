@@ -1,0 +1,156 @@
+From 359eabc8005e28a4380551e7e1ff9ea1f81b293a Mon Sep 17 00:00:00 2001
+From: Babalola Sadiq <babalolasadiq@yahoo.com>
+Date: Wed, 15 Apr 2020 07:25:50 +0100
+Subject: [PATCH] create patch file
+
+---
+ JPMC-tech-task-3-PY3 - Shortcut.lnk | Bin 0 -> 1249 bytes
+ src/DataManipulator.ts              |  43 +++++++++++++++++++---------
+ src/Graph.tsx                       |  31 ++++++++++++--------
+ 3 files changed, 49 insertions(+), 25 deletions(-)
+ create mode 100644 JPMC-tech-task-3-PY3 - Shortcut.lnk
+
+diff --git a/JPMC-tech-task-3-PY3 - Shortcut.lnk b/JPMC-tech-task-3-PY3 - Shortcut.lnk
+new file mode 100644
+index 0000000000000000000000000000000000000000..afb36d28cf946c6c7fbec2fc9f24c978ce40e046
+GIT binary patch
+literal 1249
+zcmb7DT}YEr7=C9~T4tNBGAT8)SU+3e9M&8zrW@)+-DgX1u|m_y)--=M%~(W~A(g9(
+z3Q8&@G$BloG>f#nh%Re%A=OnxS5}CGP!Q4cew%Z2Q=O0J{ocRx{+)BmiAbi510|Z4
+zC>39#1d@ZluO2hbC(X#pJ09OmU9<F;jIhhX{!!|YDJfI@U<+l<8a(p5Zxd*jAl%+a
+zd&~xB)M<(7BCR9@Y=NMHs(r3@A2m=S#nap~U*&L4z;-IAfybwrm7vR`8x0aSxwC+(
+z$ww|~2PHCrx*;{;(@`#I5R3WUq=uv=J)nc1lEg^f9<eVVCwrmAT15qsyj%<GId8`C
+z6j06`yShjBlbs65LRPARL5cj~K6*sQEjg8m6=wCp)44>4A~880+c@UJSsvQz*nr^2
+z9*$5M>Z%|!s`aCbdi26v9lG*@(*Ytmqz=-s;{dP;;As3;1H8B*1+WaTZdF<M7zyK-
+zrt6e?bxIZbUG;9Yzs~1X>(rtHgOOok?2S41tMFd{I5KMOzjD6mNOp2<N#Czo-G)bP
+zKDN~Y$kJbfKd%Ot&+Bh#RkwQFM+L8&I@5n7>IS+i&#X9S?a7_$o3_8m={zy3cvAG`
+z^7ysGn!njCxRZ&9&mC#)qW!Bd_1;VuN`}6NQU`pE*?F9k6K4Y4^3tJXkqUz}kTd3j
+z>|j@E1wlFB$BQ+^ljVBz)1RqVx8G=f)dqb$dvL%#fE`oS0(k)6Af|gE?IQtH3rP=|
+z&qfPfSPpySL(8{~b@>sC9=lj8;L~y%X$^yNF~a<|iMf(=`QUt9ZSS4W!$#;=u?H8k
+z4*2)$5%yopn@vnozDbXm2M}#92|_V>@H||UMUB(~u0eWA;oZr+(F80$eU>`_uJzur
+zdX@3|8^!nxP21k3g&fdlumjhc1N=FAXUy3+|Em+i_`*p?*Ed@p1Y1joN==#pV^{BH
+d=-mL70z%Q)VD{_hMI+WNCtrp#CRo3?eglJa?c4wW
+
+literal 0
+HcmV?d00001
+
+diff --git a/src/DataManipulator.ts b/src/DataManipulator.ts
+index f6b15ff..7a0aba3 100644
+--- a/src/DataManipulator.ts
++++ b/src/DataManipulator.ts
+@@ -1,20 +1,37 @@
+ import { ServerRespond } from './DataStreamer';
+-
++// I updated it to match the new schema
+ export interface Row {
+-  stock: string,
+-  top_ask_price: number,
+-  timestamp: Date,
++      price_abc: number,
++      price_def: number,
++      ratio: number ,
++      timestamp: Date ,
++      upper_bound: number,
++      lower_bound: number,
++      trigger_alert: number | undefined,
+ }
+ 
+-
++//I updated the generateRow function of the DataManipulator class so that it can return the processed data which will be rendered by the Graph component’s table
+ export class DataManipulator {
+-  static generateRow(serverResponds: ServerRespond[]): Row[] {
+-    return serverResponds.map((el: any) => {
+-      return {
+-        stock: el.stock,
+-        top_ask_price: el.top_ask && el.top_ask.price || 0,
+-        timestamp: el.timestamp,
+-      };
+-    })
++  static generateRow(serverRespond: ServerRespond[]): Row {
++    const priceABC =(serverRespond[0].top_ask.price + serverRespond[0].top_bid.price) / 2;
++    const priceDEF =(serverRespond[1].top_ask.price + serverRespond[1].top_bid.price) / 2;
++    const ratio = priceABC / priceDEF;
++    const upperBound= 1 + 0.05;
++    const lowerBound= 1 - 0.05;
++     return {
++      price_abc: priceABC,
++      price_def: priceDEF,
++      ratio,
++      timestamp: serverRespond[0].timestamp > serverRespond[1].timestamp ?
++        serverRespond[0].timestamp : serverRespond[1].timestamp,
++      upper_bound: upperBound,
++      lower_bound: lowerBound,
++      trigger_alert:(ratio > upperBound || ratio <lowerBound ) ? ratio : undefined,
++
++     };
+   }
++
+ }
++    
++    
++    
+diff --git a/src/Graph.tsx b/src/Graph.tsx
+index 58fb997..95e9c8f 100644
+--- a/src/Graph.tsx
++++ b/src/Graph.tsx
+@@ -21,12 +21,15 @@ class Graph extends Component<IProps, {}> {
+   componentDidMount() {
+     // Get element from the DOM.
+     const elem = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
+-
++//I modified the schema object as that will dictate how we’ll be able to configure the Perspective table view of our graph
+     const schema = {
+-      stock: 'string',
+-      top_ask_price: 'float',
+-      top_bid_price: 'float',
++      price_abc: 'float',
++      price_def: 'float',
++      ratio: 'float',
+       timestamp: 'date',
++      upper_bound: 'float',
++      lower_bound: 'float',
++      trigger_alert: 'float',
+     };
+ 
+     if (window.perspective && window.perspective.worker()) {
+@@ -34,25 +37,29 @@ class Graph extends Component<IProps, {}> {
+     }
+     if (this.table) {
+       // Load the `table` in the `<perspective-viewer>` DOM reference.
++      // I added more attributes to the element
+       elem.load(this.table);
+-      elem.setAttribute('view', 'y_line');
+-      elem.setAttribute('column-pivots', '["stock"]');
++      elem.setAttribute('view', 'y_line'); 
+       elem.setAttribute('row-pivots', '["timestamp"]');
+-      elem.setAttribute('columns', '["top_ask_price"]');
++      elem.setAttribute('columns', '["ratio", "lower_bound", "upper_bound", "trigger_alert"]');
+       elem.setAttribute('aggregates', JSON.stringify({
+-        stock: 'distinctcount',
+-        top_ask_price: 'avg',
+-        top_bid_price: 'avg',
++        price_abc: 'distinctcount',
++        price_def: 'avg',
++        ratio: 'avg',
+         timestamp: 'distinct count',
++        upper_bound: 'avg',
++        lower_bound: 'avg',
++        trigger_alert: 'avg',
++        
+       }));
+     }
+   }
+ 
+   componentDidUpdate() {
+     if (this.table) {
+-      this.table.update(
++      this.table.update([
+         DataManipulator.generateRow(this.props.data),
+-      );
++      ]);
+     }
+   }
+ }
+-- 
+2.22.0.windows.1
+
